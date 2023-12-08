@@ -54,7 +54,7 @@ class Queues
             CarbonImmutable::now()->getTimestamp(),
             $event::class,
             match ($event::class) {
-                JobQueued::class => $event->connectionName.':'.($event->job->queue ?? $this->getDefaultQueue($event->connectionName)),
+                JobQueued::class => $this->resolveConnection($event->connectionName).':'.($event->job->queue ?? $this->getDefaultQueue($event->connectionName)),
                 default => $event->job->getConnectionName().':'.$event->job->getQueue(), // @phpstan-ignore method.nonObject method.nonObject
             },
             match ($event::class) {
@@ -96,5 +96,19 @@ class Queues
     protected function getDefaultQueue(string $connection): string
     {
         return $this->config->get('queue.connections.'.$connection.'.queue', 'default');
+    }
+
+    /**
+     * Resolve the connection name.
+     */
+    protected function resolveConnection(string $connection): string
+    {
+        $connection = $this->config->get('queue.connections.'.$connection.'.connection', $connection);
+
+        if ($connection === 'default') {
+            return $this->config->get('queue.default');
+        }
+
+        return $connection;
     }
 }
